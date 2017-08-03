@@ -80,13 +80,28 @@ function testModulePath(value, fileDir, aliases = {}, extensions = []) {
   }
 
   try {
-    resolve.sync(value, {
+    resolve.sync(resolveAbsolutePath(fileDir,value)||value, {
       basedir: fileDir,
       extensions
     });
   } catch (e) {
     return e.message;
   }
+}
+
+function resolveAbsolutePath(dir, value) {
+  if (!dir || dir.length === 0 || dir === '.' || dir === '/')
+    return null;
+
+  var searchPath = _path.join(dir, 'package.json');
+  if (_fsPlus.existsSync(searchPath)) {
+    var config = require(searchPath);
+    if (config.name && value.startsWith(config.name)) {
+      var relativeTo = value.replace(new RegExp('^' + config.name), '');
+      return _path.join(dir, relativeTo);
+    }
+  }
+  return resolveAbsolutePath(_path.dirname(dir), value);
 }
 
 function testRequirePath(fileName, node, context, config) {
